@@ -29,7 +29,63 @@ use wayle_power_profiles::PowerProfilesService;
 use wayle_sysinfo::SysinfoService;
 use wayle_systray::{SystemTrayService, types::TrayMode};
 use wayle_wallpaper::WallpaperService;
-use zbus::{Connection, fdo::DBusProxy};
+use zbus::{Connection, fdo::DBusProxy, zvariant::OwnedObjectPath};
+
+const DISPLAY_DEVICE: &str = "/org/freedesktop/UPower/devices/DisplayDevice";
+const UPOWER_BATTERY_TYPE: u32 = 2;
+
+#[zbus::proxy(
+    interface = "org.freedesktop.UPower",
+    default_service = "org.freedesktop.UPower",
+    default_path = "/org/freedesktop/UPower"
+)]
+trait UPower {
+    fn enumerate_devices(&self) -> zbus::Result<Vec<OwnedObjectPath>>;
+}
+
+/// Returns the first real battery device path from UPower (Type=2),
+/// falling back to DisplayDevice if none is found or on any error.
+/// The DisplayDevice is a virtual composite that lacks hardware-specific
+/// properties like ChargeThresholdSupported.
+async fn find_battery_device_path() -> OwnedObjectPath {
+    let fallback = OwnedObjectPath::try_from(DISPLAY_DEVICE).expect("valid static path");
+
+    let Ok(conn) = Connection::system().await else {
+        return fallback;
+    };
+
+    let result: zbus::Result<OwnedObjectPath> = async {
+        let upower = UPowerProxy::new(&conn).await?;
+        let devices = upower.enumerate_devices().await?;
+
+        for path in devices {
+            let props = zbus::fdo::PropertiesProxy::builder(&conn)
+                .destination("org.freedesktop.UPower")?
+                .path(path.clone())?
+                .build()
+                .await?;
+
+            let val = props.get("org.freedesktop.UPower.Device", "Type").await?;
+            if u32::try_from(val).unwrap_or(0) == UPOWER_BATTERY_TYPE {
+                return Ok(path);
+            }
+        }
+
+        Err(zbus::Error::Failure("no battery device found".into()))
+    }
+    .await;
+
+    match result {
+        Ok(path) => {
+            debug!(path = %path, "Using battery device");
+            path
+        }
+        Err(err) => {
+            warn!(error = %err, "Battery device discovery failed, using DisplayDevice");
+            fallback
+        }
+    }
+}
 
 use crate::{
     services::{IdleInhibitService, ShellIpcService},
@@ -208,7 +264,8 @@ async fn init_core_services(
 
     let startup_duration = modules.idle_inhibit.startup_duration.get();
 
-    let battery_task = tokio::spawn(BatteryService::new());
+    let battery_path = find_battery_device_path().await;
+    let battery_task = tokio::spawn(BatteryService::builder().device_path(battery_path).build());
     let brightness_task = tokio::spawn(BrightnessService::new());
     let network_task = tokio::spawn(NetworkService::new());
     let wallpaper_cfg = config.wallpaper.clone();
