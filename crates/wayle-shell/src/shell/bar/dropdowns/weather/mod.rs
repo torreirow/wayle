@@ -1,6 +1,7 @@
 mod daily_forecast;
 mod factory;
 mod hourly_forecast;
+mod location_panel;
 mod messages;
 mod methods;
 mod stats_grid;
@@ -10,20 +11,15 @@ mod weather_header;
 
 use std::sync::Arc;
 
-use gtk::{pango, prelude::*};
+use gtk::prelude::*;
 use relm4::{gtk, prelude::*};
 use wayle_config::ConfigService;
-use wayle_weather::{WeatherErrorKind, WeatherService, WeatherStatus};
 use wayle_widgets::prelude::*;
 
 pub(super) use self::factory::Factory;
 use self::{
-    daily_forecast::{DailyForecast, DailyForecastInit},
-    hourly_forecast::{HourlyForecast, HourlyForecastInit},
-    messages::{WeatherDropdownCmd, WeatherDropdownInit, WeatherDropdownInput, WeatherPage},
-    stats_grid::{StatsGrid, StatsGridInit},
-    sun_times::{SunTimes, SunTimesInit},
-    weather_header::{WeatherHeader, WeatherHeaderInit},
+    location_panel::{LocationPanel, LocationPanelInit, LocationPanelInput},
+    messages::{WeatherDropdownCmd, WeatherDropdownInit, WeatherDropdownInput},
 };
 use crate::{i18n::t, shell::bar::dropdowns::scaled_dimension};
 
@@ -31,19 +27,14 @@ const BASE_WIDTH: f32 = 395.0;
 const BASE_HEIGHT: f32 = 695.0;
 
 pub(crate) struct WeatherDropdown {
-    weather: Arc<WeatherService>,
     config: Arc<ConfigService>,
-
+    panels: Vec<Controller<LocationPanel>>,
+    active_location: usize,
+    tab_labels: Vec<String>,
+    show_tabs: bool,
+    tab_buttons: Vec<gtk::Button>,
     scaled_width: i32,
     scaled_height: i32,
-    page: WeatherPage,
-    error_kind: Option<WeatherErrorKind>,
-
-    weather_header: Controller<WeatherHeader>,
-    stats_grid: Controller<StatsGrid>,
-    hourly_forecast: Controller<HourlyForecast>,
-    daily_forecast: Controller<DailyForecast>,
-    sun_times: Controller<SunTimes>,
 }
 
 #[relm4::component(pub(crate))]
@@ -62,6 +53,10 @@ impl Component for WeatherDropdown {
             set_width_request: model.scaled_width,
             #[watch]
             set_height_request: model.scaled_height,
+
+            connect_closed[sender] => move |_| {
+                sender.input(WeatherDropdownInput::SwitchLocation(0));
+            },
 
             #[template]
             Dropdown {
@@ -91,89 +86,23 @@ impl Component for WeatherDropdown {
                 DropdownContent {
                     set_vexpand: true,
 
-                    #[name = "page_stack"]
+                    #[name = "tab_bar"]
+                    gtk::Box {
+                        add_css_class: "location-tab-bar",
+                        set_orientation: gtk::Orientation::Horizontal,
+                        set_spacing: 4,
+                        #[watch]
+                        set_visible: model.show_tabs,
+                    },
+
+                    #[name = "panel_stack"]
                     gtk::Stack {
                         set_transition_type: gtk::StackTransitionType::Crossfade,
                         set_vhomogeneous: true,
                         set_hhomogeneous: true,
-                        #[name = "loaded_page"]
-                        add_named[Some("loaded")] = &gtk::Box {
-                            set_orientation: gtk::Orientation::Vertical,
-                            set_vexpand: true,
-
-                            #[local_ref]
-                            weather_header_widget -> gtk::Box {},
-
-                            #[local_ref]
-                            stats_grid_widget -> gtk::Box {},
-
-                            #[local_ref]
-                            hourly_forecast_widget -> gtk::Box {},
-
-                            #[local_ref]
-                            daily_forecast_widget -> gtk::Box {},
-
-                            #[local_ref]
-                            sun_times_widget -> gtk::Box {},
-                        },
-
-                        #[name = "loading_page"]
-                        add_named[Some("loading")] = &gtk::Box {
-                            add_css_class: "loading-weather",
-                            set_orientation: gtk::Orientation::Vertical,
-                            set_valign: gtk::Align::Center,
-                            set_halign: gtk::Align::Fill,
-                            set_vexpand: true,
-
-                            gtk::Image {
-                                add_css_class: "loading-icon",
-                                set_icon_name: Some("ld-sun-symbolic"),
-                            },
-
-                            gtk::Label {
-                                add_css_class: "loading-text",
-                                set_label: &t!("dropdown-weather-loading"),
-                                set_ellipsize: pango::EllipsizeMode::End,
-                            },
-                        },
-
-                        #[name = "error_page"]
-                        add_named[Some("error")] = &gtk::Box {
-                            add_css_class: "error-weather",
-                            set_orientation: gtk::Orientation::Vertical,
-                            set_valign: gtk::Align::Center,
-                            set_halign: gtk::Align::Fill,
-                            set_vexpand: true,
-
-                            gtk::Image {
-                                add_css_class: "error-icon",
-                                set_icon_name: Some("ld-info-symbolic"),
-                            },
-
-                            gtk::Label {
-                                add_css_class: "error-title",
-                                set_label: &t!("dropdown-weather-error-title"),
-                                set_ellipsize: pango::EllipsizeMode::End,
-                            },
-
-                            gtk::Label {
-                                add_css_class: "error-text",
-                                #[watch]
-                                set_label: &model.error_description(),
-                                set_ellipsize: pango::EllipsizeMode::End,
-                            },
-
-                            gtk::Button {
-                                add_css_class: "weather-retry-btn",
-                                set_halign: gtk::Align::Center,
-                                set_cursor_from_name: Some("pointer"),
-                                set_label: &t!("dropdown-weather-retry"),
-                                connect_clicked => WeatherDropdownInput::Retry,
-                            },
-                        },
-
+                        set_vexpand: true,
                         #[watch]
-                        set_visible_child_name: model.page.name(),
+                        set_visible_child_name: &model.active_panel_name(),
                     },
                 },
             },
@@ -185,78 +114,97 @@ impl Component for WeatherDropdown {
         _root: Self::Root,
         sender: ComponentSender<Self>,
     ) -> ComponentParts<Self> {
-        let weather_header = WeatherHeader::builder()
-            .launch(WeatherHeaderInit {
-                weather: init.weather.clone(),
-                config: init.config.clone(),
-            })
-            .detach();
-
-        let stats_grid = StatsGrid::builder()
-            .launch(StatsGridInit {
-                weather: init.weather.clone(),
-                config: init.config.clone(),
-            })
-            .detach();
-
-        let hourly_forecast = HourlyForecast::builder()
-            .launch(HourlyForecastInit {
-                weather: init.weather.clone(),
-                config: init.config.clone(),
-            })
-            .detach();
-
-        let daily_forecast = DailyForecast::builder()
-            .launch(DailyForecastInit {
-                weather: init.weather.clone(),
-                config: init.config.clone(),
-            })
-            .detach();
-
-        let sun_times = SunTimes::builder()
-            .launch(SunTimesInit {
-                weather: init.weather.clone(),
-                config: init.config.clone(),
-            })
-            .detach();
-
+        let show_tabs = init.weather.len() > 1;
         let scale = init.config.config().styling.scale.get().value();
-        let (page, error_kind) = match init.weather.status.get() {
-            WeatherStatus::Loading => (WeatherPage::Loading, None),
-            WeatherStatus::Loaded => (WeatherPage::Loaded, None),
-            WeatherStatus::Error(kind) => (WeatherPage::Error, Some(kind)),
-        };
 
-        watchers::spawn(&sender, &init.weather, &init.config);
+        let panels: Vec<Controller<LocationPanel>> = init
+            .weather
+            .iter()
+            .zip(init.tab_labels.iter())
+            .zip(init.location_strs.iter())
+            .map(|((svc, label), loc_str)| {
+                LocationPanel::builder()
+                    .launch(LocationPanelInit {
+                        weather: svc.clone(),
+                        config: init.config.clone(),
+                        display_name: Some(label.clone()),
+                        location_str: loc_str.clone(),
+                    })
+                    .detach()
+            })
+            .collect();
 
-        let model = Self {
-            weather: init.weather,
+        watchers::spawn(&sender, &init.config);
+
+        let mut tab_buttons: Vec<gtk::Button> = Vec::new();
+
+        let mut model = Self {
             config: init.config,
+            active_location: 0,
+            tab_labels: init.tab_labels,
+            show_tabs,
+            tab_buttons: Vec::new(),
+            panels,
             scaled_width: scaled_dimension(BASE_WIDTH, scale),
             scaled_height: scaled_dimension(BASE_HEIGHT, scale),
-            page,
-            error_kind,
-            weather_header,
-            stats_grid,
-            hourly_forecast,
-            daily_forecast,
-            sun_times,
         };
 
-        let weather_header_widget = model.weather_header.widget();
-        let stats_grid_widget = model.stats_grid.widget();
-        let hourly_forecast_widget = model.hourly_forecast.widget();
-        let daily_forecast_widget = model.daily_forecast.widget();
-        let sun_times_widget = model.sun_times.widget();
-
         let widgets = view_output!();
+
+        // Register panels in the stack and build tab buttons
+        for (i, panel) in model.panels.iter().enumerate() {
+            let child_name = format!("location-{i}");
+            widgets.panel_stack.add_named(panel.widget(), Some(&child_name));
+
+            if model.show_tabs {
+                let label = model.tab_labels.get(i).cloned().unwrap_or_default();
+                let btn = gtk::Button::builder()
+                    .label(&label)
+                    .css_classes(if i == 0 {
+                        vec!["location-tab", "location-tab-active"]
+                    } else {
+                        vec!["location-tab"]
+                    })
+                    .build();
+
+                let sender_clone = sender.clone();
+                btn.connect_clicked(move |_| {
+                    sender_clone.input(WeatherDropdownInput::SwitchLocation(i));
+                });
+
+                widgets.tab_bar.append(&btn);
+                tab_buttons.push(btn);
+            }
+        }
+
+        model.tab_buttons = tab_buttons;
+        widgets.panel_stack.set_visible_child_name("location-0");
+
         ComponentParts { model, widgets }
     }
 
-    fn update(&mut self, msg: Self::Input, _sender: ComponentSender<Self>, _root: &Self::Root) {
+    fn update(
+        &mut self,
+        msg: Self::Input,
+        _sender: ComponentSender<Self>,
+        root: &Self::Root,
+    ) {
         match msg {
             WeatherDropdownInput::Retry => {
-                self.trigger_refresh();
+                if let Some(panel) = self.panels.get(self.active_location) {
+                    panel.emit(LocationPanelInput::Retry);
+                }
+            }
+            WeatherDropdownInput::SwitchLocation(idx) => {
+                if self.show_tabs {
+                    if let Some(old_btn) = self.tab_buttons.get(self.active_location) {
+                        old_btn.remove_css_class("location-tab-active");
+                    }
+                    if let Some(new_btn) = self.tab_buttons.get(idx) {
+                        new_btn.add_css_class("location-tab-active");
+                    }
+                }
+                self.active_location = idx;
             }
         }
     }
@@ -272,11 +220,8 @@ impl Component for WeatherDropdown {
                 self.scaled_width = scaled_dimension(BASE_WIDTH, scale);
                 self.scaled_height = scaled_dimension(BASE_HEIGHT, scale);
             }
-
-            WeatherDropdownCmd::PageChanged { page, error } => {
-                self.page = page;
-                self.error_kind = error;
-            }
         }
     }
+
 }
+
