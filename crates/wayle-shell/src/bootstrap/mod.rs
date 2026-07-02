@@ -29,7 +29,7 @@ use wayle_power_profiles::PowerProfilesService;
 use wayle_sysinfo::SysinfoService;
 use wayle_systray::{SystemTrayService, types::TrayMode};
 use wayle_wallpaper::WallpaperService;
-use zbus::{Connection, fdo::DBusProxy, zvariant::OwnedObjectPath};
+use zbus::{Connection, fdo::DBusProxy, names::InterfaceName, zvariant::OwnedObjectPath};
 
 const DISPLAY_DEVICE: &str = "/org/freedesktop/UPower/devices/DisplayDevice";
 const UPOWER_BATTERY_TYPE: u32 = 2;
@@ -65,7 +65,8 @@ async fn find_battery_device_path() -> OwnedObjectPath {
                 .build()
                 .await?;
 
-            let val = props.get("org.freedesktop.UPower.Device", "Type").await?;
+            let iface = InterfaceName::from_str_unchecked("org.freedesktop.UPower.Device");
+            let val = props.get(iface, "Type").await?;
             if u32::try_from(val).unwrap_or(0) == UPOWER_BATTERY_TYPE {
                 return Ok(path);
             }
