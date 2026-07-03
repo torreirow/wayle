@@ -8,6 +8,9 @@ settings-modules-weather-provider = Provider
 settings-modules-weather-location = Location
     .description = City name or "lat,lon" coordinates
 
+settings-modules-weather-location-name = Location Name
+    .description = Override the location name shown in the dropdown header (e.g. "Ermelo")
+
 settings-modules-weather-units = Temperature Unit
     .description = Metric (Celsius) or Imperial (Fahrenheit)
 
@@ -73,3 +76,12 @@ settings-modules-weather-left-click = Left Click
 
 settings-modules-weather-refresh-interval-seconds = Refresh Interval
     .description = How often weather data is fetched (seconds)
+
+settings-modules-weather-locations = Additional Locations
+    .description = List of locations shown as tabs in the dropdown. Overrides the single location field when non-empty. Each entry can have a location (city or lat,lon) and an optional name override. Note: each additional location uses one extra API request per polling interval.
+
+settings-modules-weather-locations-location = Location
+    .description = City name or "lat,lon" coordinates for this entry
+
+settings-modules-weather-locations-name = Display Name
+    .description = Override the tab label and header name for this location

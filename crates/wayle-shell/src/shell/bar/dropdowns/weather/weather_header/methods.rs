@@ -24,11 +24,15 @@ impl WeatherHeader {
 
         self.condition = weather_helpers::condition_label(weather.current.condition);
 
-        self.location = helpers::location_display(
-            &weather.location.city,
-            weather.location.region.as_deref(),
-            &weather.location.country,
-        );
+        self.location = self
+            .display_name_override
+            .clone()
+            .or_else(|| self.config.config().modules.weather.location_name.get().clone())
+            .unwrap_or_else(|| helpers::location_display(
+                &weather.location.city,
+                weather.location.region.as_deref(),
+                &weather.location.country,
+            ));
 
         let minutes = helpers::updated_ago_minutes(weather.updated_at);
         self.updated_ago = t!(

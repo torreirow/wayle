@@ -8,6 +8,9 @@ settings-modules-weather-provider = Fournisseur
 settings-modules-weather-location = Emplacement
     .description = Nom de ville ou coordonnées « lat,lon »
 
+settings-modules-weather-location-name = Nom du lieu
+    .description = Remplace le nom affiché dans l'en-tête du menu déroulant (ex. « Ermelo »)
+
 settings-modules-weather-units = Unité de température
     .description = Métrique (Celsius) ou Impérial (Fahrenheit)
 
@@ -73,3 +76,12 @@ settings-modules-weather-left-click = Clic gauche
 
 settings-modules-weather-refresh-interval-seconds = Intervalle de rafraîchissement
     .description = Fréquence de récupération des données météo (secondes)
+
+settings-modules-weather-locations = Emplacements supplémentaires
+    .description = Liste d'emplacements affichés sous forme d'onglets dans le menu déroulant. Remplace le champ d'emplacement unique lorsqu'il est non vide. Chaque entrée peut avoir un emplacement (ville ou lat,lon) et un nom optionnel. Remarque : chaque emplacement supplémentaire utilise une requête API supplémentaire par intervalle.
+
+settings-modules-weather-locations-location = Emplacement
+    .description = Nom de ville ou coordonnées « lat,lon » pour cette entrée
+
+settings-modules-weather-locations-name = Nom d'affichage
+    .description = Remplace le libellé d'onglet et le nom d'en-tête pour cet emplacement

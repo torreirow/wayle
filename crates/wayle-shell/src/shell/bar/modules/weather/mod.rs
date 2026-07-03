@@ -82,7 +82,10 @@ impl Component for WeatherModule {
                 BarButtonOutput::ScrollDown => WeatherMsg::ScrollDown,
             });
 
-        watchers::spawn_watchers(&sender, weather_config, &init.weather);
+        // Only the first (primary) weather service drives the bar label and icon.
+        if let Some(primary) = init.weather.first() {
+            watchers::spawn_watchers(&sender, weather_config, primary);
+        }
 
         let model = Self {
             bar_button,

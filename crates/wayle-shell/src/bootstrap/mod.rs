@@ -187,7 +187,7 @@ pub async fn init_services() -> Result<(StartupTimer, ShellServices), Box<dyn Er
     let (weather, core, daemons, optional) = {
         let config = config_service.config();
         let weather = timer.time_sync("Weather", || {
-            weather::build_weather_service(&config.modules)
+            weather::build_weather_services(&config.modules)
         });
 
         let (core, daemons, optional) = tokio::join!(

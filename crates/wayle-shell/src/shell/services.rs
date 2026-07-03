@@ -42,6 +42,6 @@ pub(crate) struct ShellServices {
     pub sysinfo: Arc<SysinfoService>,
     pub systray: Option<Arc<SystemTrayService>>,
     pub wallpaper: Option<Arc<WallpaperService>>,
-    pub weather: Arc<WeatherService>,
+    pub weather: Vec<Arc<WeatherService>>,
     pub shell_ipc: Arc<ShellIpcService>,
 }

@@ -16,6 +16,7 @@ pub(crate) use self::messages::WeatherHeaderInit;
 pub(crate) struct WeatherHeader {
     weather: Arc<WeatherService>,
     config: Arc<ConfigService>,
+    display_name_override: Option<String>,
 
     icon_name: String,
     icon_color_class: &'static str,
@@ -119,6 +120,7 @@ impl Component for WeatherHeader {
         let mut model = Self {
             weather: init.weather.clone(),
             config: init.config.clone(),
+            display_name_override: init.display_name_override,
             icon_name: String::from("ld-sun-symbolic"),
             icon_color_class: "sunny",
             temp_value: String::new(),

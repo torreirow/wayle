@@ -8,7 +8,8 @@ use crate::shell::bar::dropdowns::DropdownRegistry;
 
 pub(crate) struct WeatherInit {
     pub settings: BarSettings,
-    pub weather: Arc<WeatherService>,
+    /// All configured weather services. The bar label tracks only the first (index 0).
+    pub weather: Vec<Arc<WeatherService>>,
     pub config: Arc<ConfigService>,
     pub dropdowns: Rc<DropdownRegistry>,
 }

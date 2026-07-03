@@ -11,6 +11,17 @@ use crate::{
     },
 };
 
+/// A single location entry used in the `locations` list.
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize, JsonSchema)]
+pub struct WeatherLocation {
+    /// Location query: city name (e.g. `"Amsterdam"`) or `"lat,lon"` coordinates.
+    pub location: String,
+
+    /// Override the display name shown in the dropdown tab and header.
+    /// Useful when using coordinates.
+    pub name: Option<String>,
+}
+
 /// Current conditions with hourly and daily forecasts in a dropdown.
 #[wayle_config(bar_button, i18n_prefix = "settings-modules-weather")]
 pub struct WeatherConfig {
@@ -21,6 +32,35 @@ pub struct WeatherConfig {
     /// Location for weather data (city name or "lat,lon" coordinates).
     #[default(String::from("San Francisco"))]
     pub location: ConfigProperty<String>,
+
+    /// Multiple locations to display as tabs in the weather dropdown.
+    ///
+    /// When this list is non-empty it overrides the `location` and
+    /// `location-name` fields. Each entry may define an optional `name`
+    /// to override the display label shown in the tab bar and header.
+    ///
+    /// > **Note:** Each additional location consumes one additional API
+    /// > request per polling interval. Users on paid providers (VisualCrossing,
+    /// > WeatherAPI) should be mindful of their quota.
+    ///
+    /// ## Example
+    ///
+    /// ```toml
+    /// [[modules.weather.locations]]
+    /// location = "Amsterdam"
+    ///
+    /// [[modules.weather.locations]]
+    /// location = "48.8566,2.3522"
+    /// name = "Parijs"
+    /// ```
+    #[default(Vec::new())]
+    pub locations: ConfigProperty<Vec<WeatherLocation>>,
+
+    /// Override the location name shown in the weather dropdown header.
+    /// Useful when using coordinates, which return no city name from the API.
+    #[serde(rename = "location-name")]
+    #[default(None)]
+    pub location_name: ConfigProperty<Option<String>>,
 
     /// Temperature unit.
     #[default(TemperatureUnit::default())]
