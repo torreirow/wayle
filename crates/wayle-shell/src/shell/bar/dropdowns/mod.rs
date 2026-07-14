@@ -3,10 +3,12 @@ mod battery;
 mod bluetooth;
 mod brightness;
 mod calendar;
+mod clipboard;
 mod dashboard;
 mod media;
 mod network;
 mod notification;
+mod planify;
 mod registry;
 mod weather;
 
@@ -45,9 +47,11 @@ register_dropdowns! {
     "bluetooth" => bluetooth::Factory,
     "brightness" => brightness::Factory,
     "calendar" => calendar::Factory,
+    "clipboard" => clipboard::Factory,
     "dashboard" => dashboard::Factory,
     "media" => media::Factory,
     "network" => network::Factory,
     "notification" => notification::Factory,
+    "planify" => planify::Factory,
     "weather" => weather::Factory,
 }
