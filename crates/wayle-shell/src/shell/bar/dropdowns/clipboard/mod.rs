@@ -154,34 +154,31 @@ fn populate_list(list_box: &gtk::ListBox, entries: &[ClipboardEntry]) {
     }
 
     if entries.is_empty() {
-        let labels = gtk::Box::new(gtk::Orientation::Horizontal, 0);
-        labels.add_css_class("labels");
         let label = gtk::Label::new(Some("Geen clipboard history"));
-        label.add_css_class("label");
+        label.add_css_class("clipboard-empty-label");
         label.set_halign(gtk::Align::Center);
-        labels.append(&label);
         let row = gtk::ListBoxRow::new();
-        row.add_css_class("popover-item");
-        row.set_child(Some(&labels));
+        row.set_child(Some(&label));
         list_box.append(&row);
         return;
     }
 
     for entry in entries {
-        let labels = gtk::Box::new(gtk::Orientation::Horizontal, 0);
-        labels.add_css_class("labels");
+        let content = gtk::Box::new(gtk::Orientation::Horizontal, 0);
+        content.add_css_class("clipboard-entry-content");
 
         let label = gtk::Label::new(Some(&entry.preview));
-        label.add_css_class("label");
+        label.add_css_class("clipboard-entry-label");
         label.set_halign(gtk::Align::Start);
         label.set_hexpand(true);
+        label.set_single_line_mode(true);
         label.set_ellipsize(gtk::pango::EllipsizeMode::End);
         label.set_max_width_chars(48);
-        labels.append(&label);
+        content.append(&label);
 
         let row = gtk::ListBoxRow::new();
-        row.add_css_class("popover-item");
-        row.set_child(Some(&labels));
+        row.add_css_class("clipboard-entry-row");
+        row.set_child(Some(&content));
         list_box.append(&row);
     }
 }
