@@ -6,6 +6,10 @@
         border-radius: var(--rounding-element);
         transition: background var(--duration-fast);
 
+        & + .clipboard-entry-row {
+            border-top: 1px solid var(--border-subtle);
+        }
+
         &:hover {
             background: var(--bg-overlay);
         }
