@@ -1,0 +1,42 @@
+.planify-task-list {
+    // spacing handled by parent .dropdown-content
+}
+
+.planify-task-row {
+    padding: var(--space-xs) 0;
+
+    & + & {
+        border-top: 1px solid var(--border-subtle);
+    }
+
+    label:first-child {
+        font-size: var(--text-md);
+        font-weight: var(--weight-medium);
+        color: var(--fg-default);
+    }
+
+    &.planify-task-overdue {
+        label:first-child {
+            color: var(--status-error);
+        }
+    }
+}
+
+.planify-task-date {
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    color: var(--fg-subtle);
+    margin-left: var(--space-sm);
+
+    .planify-task-overdue & {
+        color: var(--status-error);
+        opacity: 0.8;
+    }
+}
+
+.planify-empty-label {
+    color: var(--fg-subtle);
+    font-size: var(--text-md);
+    font-weight: var(--weight-medium);
+    padding: var(--space-sm) 0;
+}

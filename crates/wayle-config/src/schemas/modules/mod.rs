@@ -2,6 +2,7 @@ mod types;
 
 mod battery;
 mod bluetooth;
+mod planify;
 mod brightness;
 mod cava;
 mod clock;
@@ -61,6 +62,7 @@ pub use notification::{
     IconSource, NotificationConfig, PopupCloseBehavior, PopupMonitor, PopupPosition, StackingOrder,
     UrgencyBarThreshold,
 };
+pub use planify::PlanifyConfig;
 pub use power::PowerConfig;
 pub use ram::RamConfig;
 pub use separator::SeparatorConfig;
@@ -124,6 +126,8 @@ pub struct ModulesConfig {
     #[serde(rename = "notifications")]
     #[wayle(deprecated_alias = "notification")]
     pub notifications: NotificationConfig,
+    /// Planify task list dropdown configuration.
+    pub planify: PlanifyConfig,
     /// Power menu module.
     pub power: PowerConfig,
     /// RAM usage module.
