@@ -41,5 +41,8 @@ settings-modules-dashboard-dropdown-logout-command = Logout Command
 settings-modules-dashboard-dropdown-reboot-command = Reboot Command
     .description = Shell command for the reboot button
 
+settings-modules-dashboard-dropdown-standby-command = Standby Command
+    .description = Shell command for the standby button
+
 settings-modules-dashboard-dropdown-poweroff-command = Power Off Command
     .description = Shell command for the power-off button

@@ -75,6 +75,11 @@ pub struct DashboardConfig {
     #[default(String::from("systemctl reboot"))]
     pub dropdown_reboot_command: ConfigProperty<String>,
 
+    /// Shell command for the standby button in the dashboard dropdown.
+    #[serde(rename = "dropdown-standby-command")]
+    #[default(String::from("systemctl suspend"))]
+    pub dropdown_standby_command: ConfigProperty<String>,
+
     /// Shell command for the power-off button in the dashboard dropdown.
     #[serde(rename = "dropdown-poweroff-command")]
     #[default(String::from("systemctl poweroff"))]

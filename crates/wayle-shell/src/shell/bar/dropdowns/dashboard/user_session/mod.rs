@@ -128,6 +128,18 @@ impl Component for UserSessionSection {
                     },
 
                     #[template]
+                    #[name = "standby_btn"]
+                    IconButton {
+                        add_css_class: "session-btn",
+                        set_tooltip_text: Some(&t!("dropdown-dashboard-standby")),
+                        connect_clicked => UserSessionInput::Standby,
+
+                        gtk::Image {
+                            set_icon_name: Some("ld-moon-symbolic"),
+                        },
+                    },
+
+                    #[template]
                     #[name = "power_off_btn"]
                     IconButton {
                         set_css_classes: &["icon", "session-btn", "danger"],
@@ -192,6 +204,9 @@ impl Component for UserSessionSection {
             }
             UserSessionInput::Reboot => {
                 process::run_if_set(&dashboard.dropdown_reboot_command.get());
+            }
+            UserSessionInput::Standby => {
+                process::run_if_set(&dashboard.dropdown_standby_command.get());
             }
             UserSessionInput::PowerOff => {
                 process::run_if_set(&dashboard.dropdown_poweroff_command.get());

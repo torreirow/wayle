@@ -41,5 +41,8 @@ settings-modules-dashboard-dropdown-logout-command = Commande de déconnexion
 settings-modules-dashboard-dropdown-reboot-command = Commande de redémarrage
     .description = Commande pour le bouton de redémarrage
 
+settings-modules-dashboard-dropdown-standby-command = Commande de veille
+    .description = Commande pour le bouton de veille
+
 settings-modules-dashboard-dropdown-poweroff-command = Commande d'extinction
     .description = Commande pour le bouton d'extinction

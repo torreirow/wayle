@@ -32,12 +32,13 @@ pub(crate) struct QuickActionsSection {
     airplane_active: bool,
     dnd_active: bool,
     idle_inhibit_active: bool,
-    power_saver_active: bool,
+    active_profile: PowerProfile,
 
     has_wifi: bool,
     has_bluetooth: bool,
     has_notification: bool,
     has_power_profiles: bool,
+    has_performance: bool,
 
     pre_airplane_wifi: bool,
     pre_airplane_bt: bool,
@@ -237,15 +238,15 @@ impl Component for QuickActionsSection {
                     },
                 },
 
-                #[name = "power_saver_btn"]
+                #[name = "power_profile_btn"]
                 attach[2, 1, 1, 1] = &gtk::Button {
                     add_css_class: "quick-action",
                     #[watch]
-                    set_class_active: ("active", model.power_saver_active),
+                    set_class_active: ("active", model.active_profile != PowerProfile::Balanced),
                     #[watch]
                     set_sensitive: model.has_power_profiles,
                     set_cursor_from_name: Some("pointer"),
-                    connect_clicked => QuickActionsInput::PowerSaverToggled,
+                    connect_clicked => QuickActionsInput::PowerProfileCycled,
 
                     gtk::Box {
                         set_orientation: gtk::Orientation::Vertical,
@@ -257,14 +258,16 @@ impl Component for QuickActionsSection {
                             set_halign: gtk::Align::Center,
 
                             gtk::Image {
-                                set_icon_name: Some("ld-leaf-symbolic"),
+                                #[watch]
+                                set_icon_name: Some(model.power_profile_icon()),
                             },
                         },
 
                         gtk::Label {
                             add_css_class: "quick-action-label",
                             set_halign: gtk::Align::Center,
-                            set_label: &t!("dropdown-dashboard-power-saver"),
+                            #[watch]
+                            set_label: &model.power_profile_label(),
                         },
                     },
                 },
@@ -296,8 +299,17 @@ impl Component for QuickActionsSection {
 
         let current_pp = init.power_profiles.get();
         let has_power_profiles = current_pp.is_some();
-        let power_saver_active = current_pp.as_ref().is_some_and(|service| {
-            service.power_profiles.active_profile.get() == PowerProfile::PowerSaver
+        let active_profile = current_pp
+            .as_ref()
+            .map(|service| service.power_profiles.active_profile.get())
+            .unwrap_or(PowerProfile::Balanced);
+        let has_performance = current_pp.as_ref().is_some_and(|service| {
+            service
+                .power_profiles
+                .profiles
+                .get()
+                .into_iter()
+                .any(|p| p.profile == PowerProfile::Performance)
         });
 
         watchers::spawn(
@@ -341,12 +353,13 @@ impl Component for QuickActionsSection {
             airplane_active: false,
             dnd_active: false,
             idle_inhibit_active: false,
-            power_saver_active,
+            active_profile,
 
             has_wifi,
             has_bluetooth,
             has_notification,
             has_power_profiles,
+            has_performance,
 
             pre_airplane_wifi: false,
             pre_airplane_bt: false,
@@ -363,7 +376,7 @@ impl Component for QuickActionsSection {
             QuickActionsInput::AirplaneToggled => self.toggle_airplane(&sender),
             QuickActionsInput::DndToggled => self.toggle_dnd(&sender),
             QuickActionsInput::IdleInhibitToggled => self.toggle_idle_inhibit(),
-            QuickActionsInput::PowerSaverToggled => self.toggle_power_saver(&sender),
+            QuickActionsInput::PowerProfileCycled => self.cycle_power_profile(&sender),
         }
     }
 
@@ -401,7 +414,7 @@ impl Component for QuickActionsSection {
 
             QuickActionsCmd::DndChanged(active) => self.dnd_active = active,
             QuickActionsCmd::IdleInhibitChanged(active) => self.idle_inhibit_active = active,
-            QuickActionsCmd::PowerSaverChanged(active) => self.power_saver_active = active,
+            QuickActionsCmd::PowerProfileChanged(profile) => self.active_profile = profile,
 
             QuickActionsCmd::BluetoothReady(service) => {
                 self.has_bluetooth = service.available.get();
@@ -412,8 +425,13 @@ impl Component for QuickActionsSection {
 
             QuickActionsCmd::PowerProfilesReady(service) => {
                 self.has_power_profiles = true;
-                self.power_saver_active =
-                    service.power_profiles.active_profile.get() == PowerProfile::PowerSaver;
+                self.active_profile = service.power_profiles.active_profile.get();
+                self.has_performance = service
+                    .power_profiles
+                    .profiles
+                    .get()
+                    .into_iter()
+                    .any(|p| p.profile == PowerProfile::Performance);
 
                 let token = self.power_profile_token.reset();
                 watchers::spawn_power_profile_watcher(&sender, &service, token);

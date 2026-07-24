@@ -12,6 +12,7 @@ pub(crate) enum UserSessionInput {
     Lock,
     Logout,
     Reboot,
+    Standby,
     PowerOff,
 }
 

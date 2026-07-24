@@ -3,6 +3,7 @@ use tracing::warn;
 use wayle_power_profiles::types::profile::PowerProfile;
 
 use super::{QuickActionsSection, messages::QuickActionsCmd};
+use crate::i18n::t;
 
 impl QuickActionsSection {
     pub(super) fn toggle_wifi(&self, sender: &ComponentSender<Self>) {
@@ -89,15 +90,16 @@ impl QuickActionsSection {
         }
     }
 
-    pub(super) fn toggle_power_saver(&self, sender: &ComponentSender<Self>) {
+    pub(super) fn cycle_power_profile(&self, sender: &ComponentSender<Self>) {
         let Some(power_profiles) = self.power_profiles.get() else {
             return;
         };
 
-        let target = if self.power_saver_active {
-            PowerProfile::Balanced
-        } else {
-            PowerProfile::PowerSaver
+        let target = match self.active_profile {
+            PowerProfile::PowerSaver if self.has_performance => PowerProfile::Performance,
+            PowerProfile::PowerSaver => PowerProfile::Balanced,
+            PowerProfile::Performance | PowerProfile::Unknown => PowerProfile::Balanced,
+            PowerProfile::Balanced => PowerProfile::PowerSaver,
         };
 
         sender.oneshot_command(async move {
@@ -106,9 +108,31 @@ impl QuickActionsSection {
                 .set_active_profile(target)
                 .await
             {
-                warn!(error = %err, "power profile toggle failed");
+                warn!(error = %err, "power profile cycle failed");
             }
-            QuickActionsCmd::PowerSaverChanged(target == PowerProfile::PowerSaver)
+            QuickActionsCmd::PowerProfileChanged(target)
         });
+    }
+
+    pub(super) fn power_profile_icon(&self) -> &'static str {
+        match self.active_profile {
+            PowerProfile::PowerSaver => "ld-leaf-symbolic",
+            PowerProfile::Performance => "ld-rocket-symbolic",
+            PowerProfile::Balanced | PowerProfile::Unknown => "ld-scale-symbolic",
+        }
+    }
+
+    pub(super) fn power_profile_label(&self) -> String {
+        match self.active_profile {
+            PowerProfile::PowerSaver => {
+                t!("dropdown-dashboard-battery-profile-saver")
+            }
+            PowerProfile::Performance => {
+                t!("dropdown-dashboard-battery-profile-performance")
+            }
+            PowerProfile::Balanced | PowerProfile::Unknown => {
+                t!("dropdown-dashboard-battery-profile-balanced")
+            }
+        }
     }
 }

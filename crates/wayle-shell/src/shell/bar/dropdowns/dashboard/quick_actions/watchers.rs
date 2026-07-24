@@ -6,7 +6,7 @@ use wayle_bluetooth::BluetoothService;
 use wayle_core::DeferredService;
 use wayle_network::{NetworkService, wifi::Wifi};
 use wayle_notification::NotificationService;
-use wayle_power_profiles::{PowerProfilesService, types::profile::PowerProfile};
+use wayle_power_profiles::PowerProfilesService;
 use wayle_widgets::{watch, watch_cancellable, watch_deferred};
 
 use super::{QuickActionsSection, messages::QuickActionsCmd};
@@ -89,8 +89,7 @@ pub(super) fn spawn_power_profile_watcher(
     let profile = service.power_profiles.active_profile.clone();
 
     watch_cancellable!(sender, token, [profile.watch()], |out| {
-        let is_saver = profile.get() == PowerProfile::PowerSaver;
-        let _ = out.send(QuickActionsCmd::PowerSaverChanged(is_saver));
+        let _ = out.send(QuickActionsCmd::PowerProfileChanged(profile.get()));
     });
 }
 

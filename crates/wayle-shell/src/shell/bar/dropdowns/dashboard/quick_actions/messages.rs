@@ -4,7 +4,7 @@ use wayle_bluetooth::BluetoothService;
 use wayle_core::DeferredService;
 use wayle_network::NetworkService;
 use wayle_notification::NotificationService;
-use wayle_power_profiles::PowerProfilesService;
+use wayle_power_profiles::{PowerProfilesService, types::profile::PowerProfile};
 
 use crate::services::IdleInhibitService;
 
@@ -24,7 +24,7 @@ pub(crate) enum QuickActionsInput {
     AirplaneToggled,
     DndToggled,
     IdleInhibitToggled,
-    PowerSaverToggled,
+    PowerProfileCycled,
 }
 
 #[derive(Debug)]
@@ -36,6 +36,6 @@ pub(crate) enum QuickActionsCmd {
     BluetoothReady(Arc<BluetoothService>),
     DndChanged(bool),
     IdleInhibitChanged(bool),
-    PowerSaverChanged(bool),
+    PowerProfileChanged(PowerProfile),
     PowerProfilesReady(Arc<PowerProfilesService>),
 }

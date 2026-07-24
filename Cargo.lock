@@ -4947,6 +4947,7 @@ dependencies = [
  "minijinja",
  "notify",
  "relm4",
+ "rusqlite",
  "rust-embed",
  "serde",
  "serde_json",
