@@ -10,6 +10,7 @@ mod network;
 mod notification;
 mod planify;
 mod registry;
+mod solidtime;
 mod weather;
 
 pub(crate) use self::registry::{
@@ -53,5 +54,6 @@ register_dropdowns! {
     "network" => network::Factory,
     "notification" => notification::Factory,
     "planify" => planify::Factory,
+    "solidtime" => solidtime::Factory,
     "weather" => weather::Factory,
 }
