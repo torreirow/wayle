@@ -247,6 +247,8 @@ pub enum BarModule {
     Updates,
     /// Volume control.
     Volume,
+    /// Solidtime time-tracker with live timer display.
+    Solidtime,
     /// Weather conditions display.
     Weather,
     /// Active window title.
@@ -312,6 +314,7 @@ impl BarModule {
             Self::Storage => "storage",
             Self::Systray => "systray",
             Self::Updates => "updates",
+            Self::Solidtime => "solidtime",
             Self::Volume => "volume",
             Self::Weather => "weather",
             Self::WindowTitle => "window-title",
@@ -347,6 +350,7 @@ impl BarModule {
             "storage" => Self::Storage,
             "systray" => Self::Systray,
             "updates" => Self::Updates,
+            "solidtime" => Self::Solidtime,
             "volume" => Self::Volume,
             "weather" => Self::Weather,
             "window-title" => Self::WindowTitle,
@@ -432,6 +436,7 @@ const BUILTIN_MODULES: &[&str] = &[
     "separator",
     "storage",
     "systray",
+    "solidtime",
     "updates",
     "volume",
     "weather",

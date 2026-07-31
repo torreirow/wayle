@@ -27,6 +27,7 @@ mod ram;
 mod separator;
 mod storage;
 mod systray;
+mod solidtime;
 mod volume;
 mod weather;
 mod window_title;
@@ -63,6 +64,7 @@ pub use notification::{
     UrgencyBarThreshold,
 };
 pub use planify::PlanifyConfig;
+pub use solidtime::SolidtimeConfig;
 pub use power::PowerConfig;
 pub use ram::RamConfig;
 pub use separator::SeparatorConfig;
@@ -136,6 +138,8 @@ pub struct ModulesConfig {
     pub storage: StorageConfig,
     /// Separator module.
     pub separator: SeparatorConfig,
+    /// Solidtime time-tracker module.
+    pub solidtime: SolidtimeConfig,
     /// System tray module.
     pub systray: SystrayConfig,
     /// Volume control module.
