@@ -29,10 +29,12 @@ pub(crate) struct SolidtimeDropdown {
     status_dot: gtk::Box,
     conn_dot: gtk::Box,
     start_stop_button: gtk::Button,
-    project_model: gtk::StringList,
     recent_box: gtk::Box,
     desc_entry: gtk::Entry,
-    project_dropdown: gtk::DropDown,
+    all_projects: Vec<String>,
+    project_search: gtk::Entry,
+    project_listbox: gtk::ListBox,
+    project_scroll: gtk::ScrolledWindow,
 }
 
 #[relm4::component(pub(crate))]
@@ -158,10 +160,13 @@ impl Component for SolidtimeDropdown {
                             },
 
                             #[local_ref]
-                            project_dropdown -> gtk::DropDown {
-                                set_enable_search: true,
+                            project_search -> gtk::Entry {
+                                set_placeholder_text: Some("Search project..."),
                                 set_hexpand: true,
                             },
+
+                            #[local_ref]
+                            project_scroll -> gtk::ScrolledWindow {},
                         },
 
                         // Start/Stop button
@@ -209,18 +214,101 @@ impl Component for SolidtimeDropdown {
         let scale = cfg.bar.scale.get().value();
         let scaled_width = scaled_dimension(BASE_WIDTH, scale);
 
-        let project_model = gtk::StringList::new(&[]);
-        let search_expr = gtk::PropertyExpression::new(
-            gtk::StringObject::static_type(),
-            gtk::Expression::NONE,
-            "string",
-        );
-        let project_dropdown = gtk::DropDown::builder()
-            .model(&project_model)
-            .expression(&search_expr)
-            .enable_search(true)
-            .hexpand(true)
-            .build();
+        // Project listbox with keyboard navigation
+        let project_listbox = gtk::ListBox::new();
+        project_listbox.add_css_class("solidtime-project-list");
+        project_listbox.set_selection_mode(gtk::SelectionMode::Single);
+        project_listbox.set_activate_on_single_click(true);
+
+        let project_scroll = gtk::ScrolledWindow::new();
+        project_scroll.set_child(Some(&project_listbox));
+        project_scroll.set_vscrollbar_policy(gtk::PolicyType::Automatic);
+        project_scroll.set_hscrollbar_policy(gtk::PolicyType::Never);
+        project_scroll.set_max_content_height(140);
+        project_scroll.set_propagate_natural_height(true);
+        project_scroll.add_css_class("solidtime-project-scroll");
+
+        let project_search = gtk::Entry::new();
+        project_search.add_css_class("solidtime-project-search");
+
+        // Down arrow in search entry → focus first visible listbox row
+        {
+            let key_ctrl = gtk::EventControllerKey::new();
+            let listbox = project_listbox.clone();
+            key_ctrl.connect_key_pressed(move |_, key, _, _| {
+                if key == gtk::gdk::Key::Down {
+                    let mut idx = 0i32;
+                    loop {
+                        match listbox.row_at_index(idx) {
+                            None => break,
+                            Some(row) if row.is_visible() => {
+                                listbox.select_row(Some(&row));
+                                row.grab_focus();
+                                break;
+                            }
+                            _ => idx += 1,
+                        }
+                    }
+                    return gtk::glib::Propagation::Stop;
+                }
+                gtk::glib::Propagation::Proceed
+            });
+            project_search.add_controller(key_ctrl);
+        }
+
+        // Up arrow on first visible listbox row → return focus to search entry
+        {
+            let key_ctrl = gtk::EventControllerKey::new();
+            let listbox = project_listbox.clone();
+            let search = project_search.clone();
+            key_ctrl.connect_key_pressed(move |_, key, _, _| {
+                if key == gtk::gdk::Key::Up {
+                    if let Some(row) = listbox.selected_row() {
+                        let first_visible_idx = {
+                            let mut idx = 0i32;
+                            loop {
+                                match listbox.row_at_index(idx) {
+                                    None => break -1,
+                                    Some(r) if r.is_visible() => break idx,
+                                    _ => idx += 1,
+                                }
+                            }
+                        };
+                        if row.index() == first_visible_idx {
+                            search.grab_focus();
+                            return gtk::glib::Propagation::Stop;
+                        }
+                    }
+                }
+                gtk::glib::Propagation::Proceed
+            });
+            project_listbox.add_controller(key_ctrl);
+        }
+
+        // Typing in search entry filters listbox rows
+        {
+            let listbox = project_listbox.clone();
+            project_search.connect_changed(move |entry| {
+                let text = entry.text().to_lowercase();
+                listbox.set_filter_func(move |row| {
+                    if text.is_empty() {
+                        return true;
+                    }
+                    row.widget_name().to_lowercase().contains(&text)
+                });
+            });
+        }
+
+        // Row activated (click or Enter) → copy name to search entry and return focus
+        {
+            let search = project_search.clone();
+            project_listbox.connect_row_activated(move |_, row| {
+                let name = row.widget_name().to_string();
+                search.set_text(&name);
+                search.set_position(-1);
+                search.grab_focus();
+            });
+        }
 
         let elapsed_label = gtk::Label::new(Some("00:00:00"));
         let status_label = gtk::Label::new(Some("Idle"));
@@ -245,10 +333,12 @@ impl Component for SolidtimeDropdown {
             status_dot: status_dot.clone(),
             conn_dot: conn_dot.clone(),
             start_stop_button: start_stop_button.clone(),
-            project_model,
             recent_box: recent_box.clone(),
             desc_entry: desc_entry.clone(),
-            project_dropdown: project_dropdown.clone(),
+            all_projects: vec![],
+            project_search: project_search.clone(),
+            project_listbox,
+            project_scroll: project_scroll.clone(),
         };
 
         let elapsed_label = &model.elapsed_label;
@@ -259,7 +349,8 @@ impl Component for SolidtimeDropdown {
         let start_stop_button = &model.start_stop_button;
         let recent_box = &model.recent_box;
         let desc_entry = &model.desc_entry;
-        let project_dropdown = &model.project_dropdown;
+        let project_search = &model.project_search;
+        let project_scroll = &model.project_scroll;
 
         let widgets = view_output!();
 
@@ -277,13 +368,11 @@ impl Component for SolidtimeDropdown {
         match msg {
             SolidtimeDropdownMsg::StartTimer => {
                 let description = self.desc_entry.text().to_string();
-                let project_idx = self.project_dropdown.selected();
-                let project_name = if project_idx == u32::MAX {
-                    None
+                let search_text = self.project_search.text().to_string();
+                let project_name = if self.all_projects.contains(&search_text) {
+                    Some(search_text)
                 } else {
-                    self.project_model
-                        .string(project_idx)
-                        .map(|s| s.to_string())
+                    None
                 };
 
                 sender.command(move |out, _shutdown| async move {
@@ -396,11 +485,21 @@ impl Component for SolidtimeDropdown {
                 }
             }
             SolidtimeDropdownCmd::Projects(projects) => {
-                while self.project_model.n_items() > 0 {
-                    self.project_model.remove(0);
+                self.all_projects = projects.clone();
+
+                // Rebuild listbox rows
+                while let Some(child) = self.project_listbox.first_child() {
+                    self.project_listbox.remove(&child);
                 }
                 for name in &projects {
-                    self.project_model.append(name);
+                    let row = gtk::ListBoxRow::new();
+                    row.set_widget_name(name);
+
+                    let label = gtk::Label::new(Some(name));
+                    label.set_halign(gtk::Align::Start);
+                    row.set_child(Some(&label));
+
+                    self.project_listbox.append(&row);
                 }
             }
             SolidtimeDropdownCmd::Recent(entries) => {

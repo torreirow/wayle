@@ -102,54 +102,46 @@
     padding: var(--space-xs) 0;
 }
 
-// Project picker DropDown button (closed state)
-.solidtime-dropdown dropdown > button {
-    padding: var(--space-xs) var(--space-sm);
-    background-color: var(--bg-overlay);
-    border: 1px solid var(--border-default);
-    border-radius: var(--rounding-element);
+// Project search entry
+.solidtime-project-search {
     font-size: var(--text-sm);
-    color: var(--fg-default);
-
-    &:hover {
-        border-color: var(--accent);
-    }
-
-    arrow {
-        -gtk-icon-source: -gtk-icontheme("ld-chevron-down-symbolic");
-        -gtk-icon-size: var(--icon-xs);
-        color: var(--fg-subtle);
-        margin-left: var(--space-xs);
-    }
 }
 
-// Project picker DropDown popup list
-.solidtime-dropdown dropdown > popover > contents {
-    padding: var(--space-xs);
-}
-
-.solidtime-dropdown dropdown searchbar {
-    margin-bottom: var(--space-xs);
-}
-
-.solidtime-dropdown dropdown listview row {
-    padding: var(--space-xs) var(--space-sm);
+// Project list scrolled window
+.solidtime-project-scroll {
+    border: 1px solid var(--border-subtle);
     border-radius: var(--rounding-element);
-    font-size: var(--text-sm);
-    color: var(--fg-muted);
+    margin-top: var(--space-xs);
 }
 
-.solidtime-dropdown dropdown listview row:hover {
-    background-color: var(--bg-hover);
-    color: var(--fg-default);
-}
+// Project listbox rows
+.solidtime-project-list {
+    background-color: transparent;
 
-.solidtime-dropdown dropdown listview row:focus {
-    background-color: var(--bg-hover);
-    color: var(--fg-default);
-}
+    row {
+        padding: var(--space-xs) var(--space-sm);
+        border-radius: var(--rounding-element);
+        font-size: var(--text-sm);
+        color: var(--fg-muted);
 
-.solidtime-dropdown dropdown listview row:selected {
-    background-color: var(--accent-subtle);
-    color: var(--accent);
+        label {
+            color: inherit;
+        }
+
+        &:hover {
+            background-color: var(--bg-hover);
+            color: var(--fg-default);
+        }
+
+        &:focus {
+            background-color: var(--bg-hover);
+            color: var(--fg-default);
+            outline: none;
+        }
+
+        &:selected {
+            background-color: var(--accent-subtle);
+            color: var(--accent);
+        }
+    }
 }
