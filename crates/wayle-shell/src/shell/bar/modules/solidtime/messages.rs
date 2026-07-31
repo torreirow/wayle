@@ -26,6 +26,8 @@ pub(crate) enum SolidtimeCmd {
     StatusUpdate {
         running: bool,
         start: Option<DateTime<Utc>>,
+        description: String,
+        project: Option<String>,
     },
     Tick,
 }

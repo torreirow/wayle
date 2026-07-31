@@ -28,6 +28,8 @@ pub(crate) struct SolidtimeModule {
     dropdowns: Rc<DropdownRegistry>,
     running: bool,
     start: Option<DateTime<Utc>>,
+    description: String,
+    project: Option<String>,
 }
 
 #[relm4::component(pub(crate))]
@@ -92,6 +94,8 @@ impl Component for SolidtimeModule {
             dropdowns: init.dropdowns,
             running: false,
             start: None,
+            description: String::new(),
+            project: None,
         };
         let bar_button = model.bar_button.widget();
         let widgets = view_output!();
@@ -115,12 +119,23 @@ impl Component for SolidtimeModule {
 
     fn update_cmd(&mut self, msg: SolidtimeCmd, _sender: ComponentSender<Self>, root: &Self::Root) {
         match msg {
-            SolidtimeCmd::StatusUpdate { running, start } => {
+            SolidtimeCmd::StatusUpdate { running, start, description, project } => {
                 self.running = running;
                 self.start = start;
+                self.description = description;
+                self.project = project;
 
-                if !running {
+                if running {
+                    let tooltip = match (&*self.description, &self.project) {
+                        ("", None) => None,
+                        ("", Some(p)) => Some(p.clone()),
+                        (d, None) => Some(d.to_string()),
+                        (d, Some(p)) => Some(format!("{d} · {p}")),
+                    };
+                    self.bar_button.emit(BarButtonInput::SetTooltip(tooltip));
+                } else {
                     self.bar_button.emit(BarButtonInput::SetLabel(String::from("⏱")));
+                    self.bar_button.emit(BarButtonInput::SetTooltip(None));
                     force_window_resize(root);
                 }
             }

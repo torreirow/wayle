@@ -22,8 +22,8 @@ fn spawn_poll_watcher(sender: &ComponentSender<SolidtimeModule>) {
             tokio::select! {
                 () = &mut shutdown_fut => break,
                 () = tokio::time::sleep(POLL_INTERVAL) => {
-                    let (running, start) = query_soltty_current().await;
-                    let _ = out.send(SolidtimeCmd::StatusUpdate { running, start });
+                    let (running, start, description, project) = query_soltty_current().await;
+                    let _ = out.send(SolidtimeCmd::StatusUpdate { running, start, description, project });
                 }
             }
         }
@@ -46,7 +46,7 @@ fn spawn_tick_watcher(sender: &ComponentSender<SolidtimeModule>) {
     });
 }
 
-pub(super) async fn query_soltty_current() -> (bool, Option<DateTime<Utc>>) {
+pub(super) async fn query_soltty_current() -> (bool, Option<DateTime<Utc>>, String, Option<String>) {
     let output = tokio::process::Command::new("soltty")
         .args(["current", "--json"])
         .output()
@@ -54,23 +54,32 @@ pub(super) async fn query_soltty_current() -> (bool, Option<DateTime<Utc>>) {
 
     let output = match output {
         Ok(o) if o.status.success() => o,
-        _ => return (false, None),
+        _ => return (false, None, String::new(), None),
     };
 
     let json: serde_json::Value = match serde_json::from_slice(&output.stdout) {
         Ok(v) => v,
-        Err(_) => return (false, None),
+        Err(_) => return (false, None, String::new(), None),
     };
 
     let running = json.get("running").and_then(|v| v.as_bool()).unwrap_or(false);
     if !running {
-        return (false, None);
+        return (false, None, String::new(), None);
     }
 
     let start = json
         .get("start")
         .and_then(|v| v.as_str())
         .and_then(|s| s.parse::<DateTime<Utc>>().ok());
+    let description = json
+        .get("description")
+        .and_then(|v| v.as_str())
+        .unwrap_or("")
+        .to_string();
+    let project = json
+        .get("project")
+        .and_then(|v| v.as_str())
+        .map(String::from);
 
-    (true, start)
+    (true, start, description, project)
 }
