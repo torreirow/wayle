@@ -64,6 +64,10 @@
 
 .solidtime-start-stop {
     margin-top: var(--space-xs);
+
+    > label {
+        margin: var(--space-sm) var(--space-md);
+    }
 }
 
 .solidtime-recent-row {

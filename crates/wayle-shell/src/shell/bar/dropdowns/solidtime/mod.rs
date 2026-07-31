@@ -210,8 +210,14 @@ impl Component for SolidtimeDropdown {
         let scaled_width = scaled_dimension(BASE_WIDTH, scale);
 
         let project_model = gtk::StringList::new(&[]);
+        let search_expr = gtk::PropertyExpression::new(
+            gtk::StringObject::static_type(),
+            gtk::Expression::NONE,
+            "string",
+        );
         let project_dropdown = gtk::DropDown::builder()
             .model(&project_model)
+            .expression(&search_expr)
             .enable_search(true)
             .hexpand(true)
             .build();
@@ -226,6 +232,7 @@ impl Component for SolidtimeDropdown {
         let desc_entry = gtk::Entry::new();
 
         conn_dot.add_css_class("solidtime-conn-dot");
+        start_stop_button.set_css_classes(&["primary", "solidtime-start-stop"]);
 
         let model = SolidtimeDropdown {
             running: false,
@@ -340,6 +347,8 @@ impl Component for SolidtimeDropdown {
                     self.status_label.set_label("Recording");
                     self.status_dot.add_css_class("solidtime-status-dot--running");
                     self.start_stop_button.set_label("Stop timer");
+                    self.start_stop_button
+                        .set_css_classes(&["danger", "solidtime-start-stop"]);
 
                     if !description.is_empty() {
                         let mut info = description.clone();
@@ -367,6 +376,8 @@ impl Component for SolidtimeDropdown {
                     self.status_dot
                         .remove_css_class("solidtime-status-dot--running");
                     self.start_stop_button.set_label("Start timer");
+                    self.start_stop_button
+                        .set_css_classes(&["primary", "solidtime-start-stop"]);
                     self.active_desc_label.set_visible(false);
                     self.elapsed_label.set_label("00:00:00");
                 }
