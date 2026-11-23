@@ -23,7 +23,6 @@ mod power;
 mod ram;
 mod registry;
 mod separator;
-mod solidtime;
 mod storage;
 mod systray;
 mod volume;
@@ -83,7 +82,6 @@ register_modules! {
     Power => power::Factory,
     Ram => ram::Factory,
     Separator => separator::Factory,
-    Solidtime => solidtime::Factory,
     Storage => storage::Factory,
     Systray => systray::Factory,
     Volume => volume::Factory,
